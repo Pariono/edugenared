@@ -56,7 +56,7 @@
 
         /* Styling Khusus Pilihan Ganda Agar Rapi & Sejajar */
         .pg-question {
-            margin-top: 10px;
+            margin-top: 8px;
             margin-bottom: 4px;
             font-weight: normal;
             text-align: justify;
@@ -65,12 +65,13 @@
             list-style-type: none !important;
             margin-left: 18px !important;
             padding-left: 0 !important;
-            margin-bottom: 10px !important;
+            margin-top: 2px !important;
+            margin-bottom: 8px !important;
         }
         .pg-options li {
             display: flex;
             align-items: flex-start;
-            margin-bottom: 3px;
+            margin-bottom: 2px;
             line-height: 1.4;
         }
         .pg-opt-label {
@@ -99,18 +100,21 @@
             background-color: #eff6ff33;
         }
 
-        /* CSS Cetak Langsung (Native Print) yang Bekerja di Semua Browser & HP */
+        /* CSS Cetak Langsung (Native Print) Bebas Halaman Kosong */
         @media print {
             @page {
                 size: A4 portrait;
-                margin: 15mm 18mm 15mm 18mm;
+                margin: 14mm 16mm 14mm 16mm;
             }
-            body {
-                background: white !important;
+            html, body {
+                background: #ffffff !important;
                 margin: 0 !important;
                 padding: 0 !important;
+                height: auto !important;
+                min-height: 0 !important;
+                overflow: visible !important;
             }
-            .no-print {
+            .no-print, nav, #toast-container, #kop-modal, #api-modal, #loading-banner {
                 display: none !important;
             }
             #main-container, #main-grid, #right-panel, #print-wrapper {
@@ -119,6 +123,8 @@
                 max-width: 100% !important;
                 margin: 0 !important;
                 padding: 0 !important;
+                height: auto !important;
+                min-height: 0 !important;
                 overflow: visible !important;
             }
             .document-sheet {
@@ -127,7 +133,8 @@
                 padding: 0 !important;
                 width: 100% !important;
                 max-width: 100% !important;
-                min-height: auto !important;
+                min-height: 0 !important;
+                height: auto !important;
             }
             .pg-options li {
                 page-break-inside: avoid;
@@ -140,16 +147,18 @@
                 border-collapse: collapse !important;
                 margin-left: auto !important;
                 margin-right: auto !important;
+                page-break-inside: auto !important;
             }
             .doc-content th, .doc-content td {
                 border: 1px solid #000 !important;
                 word-wrap: break-word !important;
             }
-            table, tr {
+            tr {
                 page-break-inside: avoid;
                 break-inside: avoid;
             }
             #signature-block {
+                margin-top: 20px !important;
                 page-break-inside: avoid;
                 break-inside: avoid;
             }
@@ -162,7 +171,7 @@
     <nav class="bg-indigo-700 text-white shadow-md sticky top-0 z-40 no-print">
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div class="flex items-center justify-between h-16">
-                <div class="flex items-center gap-3">
+                <div onclick="handleAdminSecretClick()" class="flex items-center gap-3 cursor-pointer select-none" title="EduGen AI Pro">
                     <div class="bg-white/20 p-2 rounded-lg">
                         <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" data-lucide="graduation-cap" aria-hidden="true" class="lucide lucide-graduation-cap w-6 h-6 text-white"><path d="M21.42 10.922a1 1 0 0 0-.019-1.838L12.83 5.18a2 2 0 0 0-1.66 0L2.6 9.08a1 1 0 0 0 0 1.832l8.57 3.908a2 2 0 0 0 1.66 0z"></path><path d="M22 10v6"></path><path d="M6 12.5V16a6 3 0 0 0 12 0v-3.5"></path></svg>
                     </div>
@@ -176,9 +185,9 @@
                         <i data-lucide="smartphone" class="w-4 h-4"></i>
                         <span>Install App</span>
                     </button>
-                    <button onclick="toggleApiModal()" class="flex items-center gap-1.5 bg-indigo-800 hover:bg-indigo-900 text-white px-3 py-2 rounded-lg text-xs sm:text-sm font-medium transition border border-indigo-500" title="Atur Gemini API Key Global">
+                    <button id="btn-admin-api" onclick="openAdminApiGate()" class="hidden items-center gap-1.5 bg-indigo-800 hover:bg-indigo-900 text-white px-3 py-2 rounded-lg text-xs sm:text-sm font-medium transition border border-indigo-500" title="Pengaturan Khusus Admin">
                         <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" data-lucide="key" aria-hidden="true" class="lucide lucide-key w-4 h-4 text-amber-300"><path d="m2 21 9.6-9.6"></path><path d="m7.5 15.5 2.3 2.3a1 1 0 0 1 0 1.4l-2.1 2.1a1 1 0 0 1-1.4 0L4 19"></path><circle cx="15.5" cy="7.5" r="5.5"></circle></svg>
-                        <span class="hidden sm:inline">API Key</span>
+                        <span class="hidden sm:inline">Admin API</span>
                         <span id="api-status-dot" class="w-2 h-2 rounded-full bg-amber-400" title="Status API Key"></span>
                     </button>
                     <button onclick="toggleKopModal()" class="flex items-center gap-1.5 bg-indigo-600 hover:bg-indigo-500 text-white px-3 py-2 rounded-lg text-xs sm:text-sm font-medium transition border border-indigo-400">
@@ -586,45 +595,69 @@
                 </div>
             </div>
 
-            <div class="p-4 border-t border-gray-200 bg-gray-50 flex justify-end gap-2 sticky bottom-0">
-                <button type="button" onclick="toggleKopModal()" class="px-4 py-2 rounded-xl text-xs font-medium text-gray-700 hover:bg-gray-200">Batal</button>
-                <button type="button" onclick="applyKopSettings()" class="px-5 py-2 rounded-xl text-xs font-semibold bg-indigo-600 hover:bg-indigo-700 text-white shadow">Simpan &amp; Terapkan</button>
+            <div class="p-4 border-t border-gray-200 bg-gray-50 flex justify-end gap-2">
+                <button type="button" onclick="toggleKopModal()" class="px-4 py-2 rounded-xl text-xs font-medium text-gray-700 hover:bg-gray-200 transition">Batal</button>
+                <button type="button" onclick="applyKopSettings()" class="px-5 py-2 rounded-xl text-xs font-semibold bg-indigo-600 hover:bg-indigo-700 text-white shadow transition">Simpan &amp; Terapkan</button>
             </div>
         </div>
     </div>
 
-    <!-- MODAL PENGATURAN GEMINI API KEY (UNTUK HOSTING GITHUB / GLOBAL SEMUA PERANGKAT) -->
+    <!-- MODAL PENGATURAN GEMINI API KEY (KHUSUS ADMIN DENGAN PIN) -->
     <div id="api-modal" class="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4 no-print">
         <div class="bg-white rounded-2xl max-w-md w-full shadow-2xl border border-gray-200 overflow-hidden">
             <div class="p-5 border-b border-gray-200 flex items-center justify-between bg-indigo-700 text-white">
                 <h3 class="text-base font-bold flex items-center gap-2">
-                    <i data-lucide="key" class="w-5 h-5 text-amber-300"></i>
-                    Pengaturan Gemini API Key (Global)
+                    <i data-lucide="shield-check" class="w-5 h-5 text-amber-300"></i>
+                    Panel Rahasia Admin — API Key
                 </h3>
                 <button onclick="toggleApiModal()" class="text-indigo-200 hover:text-white p-1 rounded-lg">
                     <i data-lucide="x" class="w-5 h-5"></i>
                 </button>
             </div>
-            <div class="p-5 space-y-4">
+
+            <!-- Langkah 1: Verifikasi PIN Admin -->
+            <div id="admin-pin-step" class="p-5 space-y-4">
+                <div class="bg-amber-50 border border-amber-200 rounded-xl p-3 text-xs text-amber-900">
+                    <p class="font-bold mb-1">Akses Terbatas Khusus Administrator</p>
+                    <p>Masukkan PIN Admin untuk membuka pengaturan Gemini API Key agar tidak dapat diubah sembarang pengguna.</p>
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold text-gray-700 mb-1">PIN Administrator</label>
+                    <input type="password" id="input-admin-pin" onkeydown="if(event.key==='Enter') verifyAdminPin()" placeholder="Masukkan PIN Admin..." class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500">
+                </div>
+                <div class="flex justify-end gap-2 pt-2">
+                    <button type="button" onclick="toggleApiModal()" class="px-4 py-2 rounded-xl text-xs font-medium text-gray-700 hover:bg-gray-100">Batal</button>
+                    <button type="button" onclick="verifyAdminPin()" class="px-4 py-2 rounded-xl text-xs font-semibold bg-indigo-600 hover:bg-indigo-700 text-white shadow">Buka Pengaturan</button>
+                </div>
+            </div>
+
+            <!-- Langkah 2: Form API Key (Tampil setelah PIN benar) -->
+            <div id="admin-key-step" class="hidden p-5 space-y-4">
                 <div class="bg-emerald-50 border border-emerald-200 rounded-xl p-3 text-xs text-emerald-900 space-y-1.5">
                     <p class="font-bold flex items-center gap-1.5">
                         <span class="w-2 h-2 rounded-full bg-emerald-500"></span>
-                        Mode Akses Global Semua Perangkat (HP & Laptop):
+                        Mode Akses Global Semua Perangkat (HP &amp; Laptop):
                     </p>
-                    <p>Setelah Admin menyimpan API Key di sini, key akan otomatis tersinkronisasi sehingga guru/pengguna lain di <b>HP maupun Laptop mana saja</b> langsung bisa memakai AI tanpa perlu input API Key lagi.</p>
+                    <p>Setelah Admin menyimpan API Key di sini, key akan otomatis tersinkronisasi sehingga guru/pengguna lain di <b>HP maupun Laptop mana saja</b> langsung bisa memakai AI tanpa melihat menu ini.</p>
                 </div>
                 <div>
                     <label class="block text-xs font-semibold text-gray-700 mb-1">Masukkan Gemini API Key (dari aistudio.google.com)</label>
                     <input type="password" id="input-gemini-key" placeholder="AIzaSy..." class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500">
                 </div>
                 <div class="bg-gray-50 border border-gray-200 rounded-xl p-3 text-[11px] text-gray-600 space-y-1">
-                    <p class="font-semibold text-gray-800">Opsi Permanen GitHub (Opsional):</p>
-                    <p>Anda juga dapat menempelkan API Key langsung pada baris <code class="bg-gray-200 px-1 rounded">DEFAULT_ADMIN_API_KEY</code> di dalam file <code class="bg-gray-200 px-1 rounded">index.html</code> agar tertanam permanen di repository GitHub Anda.</p>
+                    <p class="font-semibold text-gray-800">Opsi Permanen GitHub:</p>
+                    <p>Anda juga dapat menempelkan API Key langsung pada baris <code class="bg-gray-200 px-1 rounded">DEFAULT_ADMIN_API_KEY</code> di dalam file <code class="bg-gray-200 px-1 rounded">index.html</code> (PIN default: <code class="bg-gray-200 px-1 rounded">admin123</code>, ubah pada variabel <code class="bg-gray-200 px-1 rounded">ADMIN_SECRET_PIN</code>).</p>
                 </div>
                 <div class="flex items-center justify-between pt-2">
-                    <button type="button" onclick="clearApiKey()" class="text-xs text-red-600 hover:underline font-medium">Reset / Hapus Key</button>
+                    <div class="flex items-center gap-3">
+                        <button type="button" onclick="clearApiKey()" class="text-xs text-red-600 hover:underline font-medium">Reset Key</button>
+                        <button type="button" onclick="hideAdminMenu()" class="text-xs text-amber-700 hover:underline font-semibold flex items-center gap-1">
+                            <i data-lucide="eye-off" class="w-3.5 h-3.5"></i>
+                            <span>Sembunyikan Menu</span>
+                        </button>
+                    </div>
                     <div class="flex gap-2">
-                        <button type="button" onclick="toggleApiModal()" class="px-4 py-2 rounded-xl text-xs font-medium text-gray-700 hover:bg-gray-100">Batal</button>
+                        <button type="button" onclick="toggleApiModal()" class="px-4 py-2 rounded-xl text-xs font-medium text-gray-700 hover:bg-gray-100">Tutup</button>
                         <button type="button" onclick="saveApiKey()" class="px-4 py-2 rounded-xl text-xs font-semibold bg-indigo-600 hover:bg-indigo-700 text-white shadow">Simpan Global</button>
                     </div>
                 </div>
@@ -638,69 +671,24 @@
         import { getFirestore, doc, getDoc, setDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
         // =========================================================================
-        // PENGATURAN API KEY ADMIN (ISI DI SINI JIKA INGIN TERTANAM PERMANEN DI GITHUB)
+        // PENGATURAN API KEY & PIN ADMIN (UBAH PIN DI SINI SEBELUM UPLOAD GITHUB)
         // =========================================================================
-        const DEFAULT_ADMIN_API_KEY = ""; // Contoh: "AIzaSy..." (Kosongkan jika ingin diatur lewat tombol API Key di web)
+        const DEFAULT_ADMIN_API_KEY = ""; // Contoh: "AIzaSy..."
+        const ADMIN_SECRET_PIN = "admin123"; // Ganti PIN rahasia admin Anda di sini
+        window.ADMIN_SECRET_PIN = ADMIN_SECRET_PIN;
         window.globalSyncedApiKey = DEFAULT_ADMIN_API_KEY;
 
-        // Definisi global getActiveApiKey agar selalu tersedia sebelum modul async berjalan
         window.getActiveApiKey = function() {
-            if (window.globalSyncedApiKey && window.globalSyncedApiKey.trim() !== "") {
-                return window.globalSyncedApiKey.trim();
-            }
-            const savedKey = localStorage.getItem('edugen_gemini_api_key');
-            return savedKey ? savedKey.trim() : "";
+            return window.globalSyncedApiKey || localStorage.getItem('edugen_gemini_api_key') || DEFAULT_ADMIN_API_KEY || "";
         };
 
-        // Inisialisasi Cloud Sync Global agar API Key yang disimpan Admin otomatis aktif di semua HP & Laptop
-        async function initGlobalKeySync() {
-            try {
-                if (typeof __firebase_config !== 'undefined' && __firebase_config) {
-                    const firebaseConfig = JSON.parse(__firebase_config);
-                    const app = initializeApp(firebaseConfig);
-                    const auth = getAuth(app);
-                    const db = getFirestore(app);
-                    const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
-
-                    if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
-                        await signInWithCustomToken(auth, __initial_auth_token);
-                    } else {
-                        await signInAnonymously(auth);
-                    }
-
-                    const keyDocRef = doc(db, 'artifacts', appId, 'public', 'data', 'global_settings', 'api_config');
-                    const snap = await getDoc(keyDocRef);
-                    if (snap.exists() && snap.data().geminiApiKey) {
-                        window.globalSyncedApiKey = snap.data().geminiApiKey;
-                        localStorage.setItem('edugen_gemini_api_key', window.globalSyncedApiKey);
-                    }
-
-                    onSnapshot(keyDocRef, (docSnap) => {
-                        if (docSnap.exists() && docSnap.data().geminiApiKey) {
-                            window.globalSyncedApiKey = docSnap.data().geminiApiKey;
-                            localStorage.setItem('edugen_gemini_api_key', window.globalSyncedApiKey);
-                            updateApiStatusIndicator(true);
-                        }
-                    });
-
-                    window._saveGlobalKeyToCloud = async (newKey) => {
-                        await setDoc(keyDocRef, { geminiApiKey: newKey, updatedAt: Date.now() }, { merge: true });
-                    };
-                }
-            } catch (e) {
-                console.debug("Berjalan dalam mode standalone GitHub.");
-            }
-            const isCanvasEnv = window.location.hostname.includes('usercontent.goog') || window.location.protocol === 'blob:';
-            updateApiStatusIndicator(Boolean(window.getActiveApiKey()) || isCanvasEnv);
-        }
-
-        function updateApiStatusIndicator(isReady) {
+        function updateApiStatusIndicator(isActive) {
             const dot = document.getElementById('api-status-dot');
             if (!dot) return;
-            if (isReady) {
+            if (isActive) {
                 dot.classList.remove('bg-amber-400');
                 dot.classList.add('bg-emerald-400');
-                dot.title = 'API Key Global Aktif';
+                dot.title = 'API Key Aktif';
             } else {
                 dot.classList.remove('bg-emerald-400');
                 dot.classList.add('bg-amber-400');
@@ -708,6 +696,158 @@
             }
         }
         window.updateApiStatusIndicator = updateApiStatusIndicator;
+
+        // Manajemen Akses Rahasia Admin (Tersembunyi dari user biasa)
+        let adminClickCount = 0;
+        let adminClickTimer = null;
+        let isAdminUnlocked = false;
+
+        window.handleAdminSecretClick = function() {
+            adminClickCount++;
+            clearTimeout(adminClickTimer);
+            adminClickTimer = setTimeout(() => { adminClickCount = 0; }, 1500);
+            if (adminClickCount >= 5) {
+                adminClickCount = 0;
+                const btnAdmin = document.getElementById('btn-admin-api');
+                if (btnAdmin && !btnAdmin.classList.contains('hidden')) {
+                    window.hideAdminMenu();
+                } else {
+                    window.openAdminApiGate();
+                }
+            }
+        };
+
+        window.hideAdminMenu = function() {
+            isAdminUnlocked = false;
+            const btnAdmin = document.getElementById('btn-admin-api');
+            const modal = document.getElementById('api-modal');
+            if (btnAdmin) {
+                btnAdmin.classList.add('hidden');
+                btnAdmin.classList.remove('flex');
+            }
+            if (modal) {
+                modal.classList.add('hidden');
+            }
+            showToast('Menu Admin API berhasil disembunyikan kembali.', 'info');
+        };
+
+        // Shortcut Keyboard Ctrl + Shift + A atau URL ?admin=1
+        document.addEventListener('keydown', (e) => {
+            if (e.ctrlKey && e.shiftKey && (e.key === 'A' || e.key === 'a')) {
+                e.preventDefault();
+                window.openAdminApiGate();
+            }
+        });
+
+        window.addEventListener('DOMContentLoaded', () => {
+            const params = new URLSearchParams(window.location.search);
+            if (params.get('admin') === '1') {
+                const btnAdmin = document.getElementById('btn-admin-api');
+                if (btnAdmin) {
+                    btnAdmin.classList.remove('hidden');
+                    btnAdmin.classList.add('flex');
+                }
+            }
+            updateApiStatusIndicator(Boolean(window.getActiveApiKey()));
+        });
+
+        window.openAdminApiGate = function() {
+            const modal = document.getElementById('api-modal');
+            const pinStep = document.getElementById('admin-pin-step');
+            const keyStep = document.getElementById('admin-key-step');
+            const pinInput = document.getElementById('input-admin-pin');
+
+            modal.classList.remove('hidden');
+            if (isAdminUnlocked) {
+                pinStep.classList.add('hidden');
+                keyStep.classList.remove('hidden');
+                document.getElementById('input-gemini-key').value = window.getActiveApiKey();
+            } else {
+                pinStep.classList.remove('hidden');
+                keyStep.classList.add('hidden');
+                pinInput.value = '';
+                setTimeout(() => pinInput.focus(), 100);
+            }
+        };
+
+        window.verifyAdminPin = function() {
+            const enteredPin = document.getElementById('input-admin-pin').value.trim();
+            const expectedPin = window.ADMIN_SECRET_PIN || 'admin123';
+            if (enteredPin === expectedPin) {
+                isAdminUnlocked = true;
+                document.getElementById('admin-pin-step').classList.add('hidden');
+                document.getElementById('admin-key-step').classList.remove('hidden');
+                document.getElementById('input-gemini-key').value = window.getActiveApiKey();
+                const btnAdmin = document.getElementById('btn-admin-api');
+                if (btnAdmin) {
+                    btnAdmin.classList.remove('hidden');
+                    btnAdmin.classList.add('flex');
+                }
+                showToast('Verifikasi Admin berhasil!', 'success');
+            } else {
+                showToast('PIN Admin salah! Akses ditolak.', 'error');
+            }
+        };
+
+        window.toggleApiModal = function() {
+            const modal = document.getElementById('api-modal');
+            if (modal.classList.contains('hidden')) {
+                window.openAdminApiGate();
+            } else {
+                modal.classList.add('hidden');
+            }
+        };
+
+        async function initGlobalKeySync() {
+            const localKey = localStorage.getItem('edugen_gemini_api_key');
+            if (localKey) {
+                window.globalSyncedApiKey = localKey;
+            }
+            updateApiStatusIndicator(Boolean(window.getActiveApiKey()));
+
+            try {
+                if (typeof __firebase_config !== 'undefined' && __firebase_config) {
+                    const firebaseConfig = JSON.parse(__firebase_config);
+                    const app = initializeApp(firebaseConfig);
+                    const auth = getAuth(app);
+                    const db = getFirestore(app);
+                    const appId = typeof __app_id !== 'undefined' ? __app_id : 'edugen-ai-pro';
+
+                    if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
+                        await signInWithCustomToken(auth, __initial_auth_token);
+                    } else {
+                        await signInAnonymously(auth);
+                    }
+
+                    const configRef = doc(db, 'artifacts', appId, 'public', 'data', 'admin_settings', 'gemini_config');
+                    const snap = await getDoc(configRef);
+                    if (snap.exists() && snap.data().apiKey) {
+                        window.globalSyncedApiKey = snap.data().apiKey;
+                        localStorage.setItem('edugen_gemini_api_key', snap.data().apiKey);
+                        updateApiStatusIndicator(true);
+                    }
+
+                    onSnapshot(configRef, (docSnap) => {
+                        if (docSnap.exists()) {
+                            const remoteKey = docSnap.data().apiKey || "";
+                            window.globalSyncedApiKey = remoteKey;
+                            if (remoteKey) {
+                                localStorage.setItem('edugen_gemini_api_key', remoteKey);
+                            } else {
+                                localStorage.removeItem('edugen_gemini_api_key');
+                            }
+                            updateApiStatusIndicator(Boolean(remoteKey));
+                        }
+                    });
+
+                    window._saveGlobalKeyToCloud = async (newKey) => {
+                        await setDoc(configRef, { apiKey: newKey, updatedAt: Date.now() }, { merge: true });
+                    };
+                }
+            } catch (err) {
+                console.warn('Sinkronisasi cloud berjalan dalam mode lokal:', err.message);
+            }
+        }
 
         initGlobalKeySync();
     </script>
@@ -1317,6 +1457,13 @@ D. Pilihan keempat). Jangan gabungkan opsi dalam satu baris!
                 }
             });
 
+            // Rapikan elemen kosong (<p><br></p> atau div kosong) yang bisa memicu spasi berlebih / halaman kosong
+            temp.querySelectorAll('p, div').forEach(el => {
+                if (!el.querySelector('img, table, svg') && el.textContent.trim() === '') {
+                    el.remove();
+                }
+            });
+
             return temp.innerHTML;
         }
 
@@ -1467,9 +1614,12 @@ Pastikan seluruh butir soal unik, bervariasi, dan sesuai standar evaluasi ${jenj
 
         // --- FUNGSI PRINT, EXPORT PDF & EXPORT WORD ---
         function printDocument() {
+            const placeholder = document.getElementById('empty-state-placeholder');
+            if (placeholder) {
+                showToast('Silakan Generate dokumen terlebih dahulu sebelum mencetak.', 'error');
+                return;
+            }
             showToast('Membuka jendela cetak...', 'info');
-            // Gunakan native window.print() yang sudah dioptimalkan dengan @media print
-            // dan fallback buka tab baru jika dijalankan di dalam iframe yang memblokir print()
             setTimeout(() => {
                 try {
                     window.focus();
@@ -1493,13 +1643,13 @@ Pastikan seluruh butir soal unik, bervariasi, dan sesuai standar evaluasi ${jenj
                 <head>
                     <title>Cetak Dokumen</title>
                     <style>
-                        @page { size: A4; margin: 15mm 18mm; }
-                        body { font-family: 'Times New Roman', serif; font-size: 12pt; line-height: 1.5; color: #000; margin: 0; padding: 0; }
+                        @page { size: A4 portrait; margin: 14mm 16mm; }
+                        html, body { font-family: 'Times New Roman', serif; font-size: 12pt; line-height: 1.5; color: #000; margin: 0; padding: 0; height: auto; }
                         h1, .doc-subtitle { text-align: center !important; border-bottom: none !important; font-weight: bold; text-transform: uppercase; margin: 4px 0; }
                         .kop-line { border-top: 3px solid #000; border-bottom: 1px solid #000; height: 4px; margin: 8px 0 16px; }
                         table { width: 99.5%; max-width: 99.5%; table-layout: fixed; border-collapse: collapse; margin: 10px auto; }
                         th, td { border: 1px solid #000; padding: 6px; word-wrap: break-word; }
-                        #signature-block table, #signature-block td { border: none !important; }
+                        #signature-block table, #signature-block td, #kop-surat-container table, #kop-surat-container td { border: none !important; }
                         .pg-options { list-style: none; margin-left: 16px; padding: 0; }
                         .pg-options li { display: flex; margin-bottom: 3px; }
                         .pg-opt-label { min-width: 24px; font-weight: bold; }
@@ -1514,24 +1664,44 @@ Pastikan seluruh butir soal unik, bervariasi, dan sesuai standar evaluasi ${jenj
         }
 
         function downloadPDF() {
-            const element = document.getElementById('print-area');
+            const placeholder = document.getElementById('empty-state-placeholder');
+            if (placeholder) {
+                showToast('Silakan Generate dokumen terlebih dahulu sebelum mengunduh PDF.', 'error');
+                return;
+            }
+
+            const sourceElement = document.getElementById('print-area');
             const mapel = getSelectedMapel().replace(/\s+/g, '_');
             const topik = document.getElementById('topik').value.replace(/\s+/g, '_').substring(0, 25);
             const filename = `${currentDocType}_${mapel}_${topik}.pdf`;
 
-            showToast('Menyiapkan file PDF...', 'info');
+            showToast('Menyiapkan file PDF presisi...', 'info');
+
+            // Buat kloning bersih tanpa min-height 297mm agar tidak pernah ada halaman kosong di akhir PDF
+            const clone = sourceElement.cloneNode(true);
+            clone.style.minHeight = 'auto';
+            clone.style.height = 'auto';
+            clone.style.width = '186mm';
+            clone.style.maxWidth = '186mm';
+            clone.style.padding = '0';
+            clone.style.margin = '0 auto';
+            clone.style.boxShadow = 'none';
+            clone.style.background = '#ffffff';
+
+            // Hapus elemen tersembunyi (seperti Kop atau TTD jika tidak dicentang) dari kloning
+            clone.querySelectorAll('.hidden').forEach(el => el.remove());
 
             const opt = {
                 margin:       [12, 12, 12, 12],
                 filename:     filename,
                 image:        { type: 'jpeg', quality: 0.98 },
-                html2canvas:  { scale: 2, useCORS: true, logging: false },
+                html2canvas:  { scale: 2, useCORS: true, logging: false, scrollY: 0 },
                 jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait' },
-                pagebreak:    { mode: ['avoid-all', 'css', 'legacy'] }
+                pagebreak:    { mode: ['css', 'legacy'], avoid: ['tr', '.pg-options li', '#signature-block'] }
             };
 
-            html2pdf().set(opt).from(element).save().then(() => {
-                showToast('File PDF berhasil diunduh!', 'success');
+            html2pdf().set(opt).from(clone).save().then(() => {
+                showToast('File PDF berhasil diunduh tanpa halaman kosong!', 'success');
             }).catch(err => {
                 console.error(err);
                 showToast('Gagal membuat PDF. Gunakan tombol Cetak -> Save as PDF.', 'error');
@@ -1539,6 +1709,12 @@ Pastikan seluruh butir soal unik, bervariasi, dan sesuai standar evaluasi ${jenj
         }
 
         function downloadWord() {
+            const placeholder = document.getElementById('empty-state-placeholder');
+            if (placeholder) {
+                showToast('Silakan Generate dokumen terlebih dahulu sebelum mengunduh Word.', 'error');
+                return;
+            }
+
             const mapel = getSelectedMapel().replace(/\s+/g, '_');
             const topik = document.getElementById('topik').value.replace(/\s+/g, '_').substring(0, 25);
             const filename = `${currentDocType}_${mapel}_${topik}.doc`;
@@ -1553,24 +1729,50 @@ Pastikan seluruh butir soal unik, bervariasi, dan sesuai standar evaluasi ${jenj
             const logoKanan = document.getElementById('preview-logo-kanan').src;
             const showLogoKanan = document.getElementById('toggle-logo-kanan').checked;
 
-            const docBodyHtml = document.getElementById('document-body').innerHTML;
+            // Kloning isi dokumen & rapikan opsi pilihan ganda khusus kompatibilitas Microsoft Word
+            const tempDoc = document.createElement('div');
+            tempDoc.innerHTML = document.getElementById('document-body').innerHTML;
+            tempDoc.querySelectorAll('ul.pg-options').forEach(ul => {
+                const table = document.createElement('table');
+                table.className = 'pg-word-table';
+                table.style.width = '95%';
+                table.style.marginLeft = '18pt';
+                table.style.marginTop = '2pt';
+                table.style.marginBottom = '6pt';
+                table.style.border = 'none';
+                const tbody = document.createElement('tbody');
+                ul.querySelectorAll('li').forEach(li => {
+                    const tr = document.createElement('tr');
+                    const label = li.querySelector('.pg-opt-label')?.textContent || '';
+                    const text = li.querySelector('.pg-opt-text')?.innerHTML || li.innerHTML;
+                    tr.innerHTML = `
+                        <td style="width: 22pt; border: none; padding: 1pt 2pt; font-weight: bold; vertical-align: top;">${label}</td>
+                        <td style="border: none; padding: 1pt 2pt; vertical-align: top;">${text}</td>
+                    `;
+                    tbody.appendChild(tr);
+                });
+                table.appendChild(tbody);
+                ul.replaceWith(table);
+            });
+
+            const docBodyHtml = tempDoc.innerHTML;
             const signatureHtml = document.getElementById('signature-block').innerHTML;
 
             const kopWordHtml = useKopSekolah ? `
                     <!-- KOP SURAT WORD -->
-                    <table class="kop-table" style="width: 100%; border-bottom: 3pt double #000000; margin-bottom: 14pt;">
+                    <table class="kop-table" style="width: 100%; border-bottom: 3pt double #000000; margin-bottom: 12pt;">
                         <tr>
                             <td style="width: 15%; text-align: center;">
-                                <img src="${logoKiri}" width="65" height="65" />
+                                <img src="${logoKiri}" width="62" height="62" />
                             </td>
                             <td style="width: 70%; text-align: center;">
-                                <div style="font-size: 12pt; font-weight: bold;">${baris1}</div>
+                                <div style="font-size: 11pt; font-weight: bold;">${baris1}</div>
                                 <div style="font-size: 12pt; font-weight: bold;">${baris2}</div>
-                                <div style="font-size: 15pt; font-weight: bold;">${namaSekolah}</div>
+                                <div style="font-size: 14pt; font-weight: bold;">${namaSekolah}</div>
                                 <div style="font-size: 9pt; font-style: italic;">${alamat}</div>
                             </td>
                             <td style="width: 15%; text-align: center;">
-                                ${showLogoKanan ? `<img src="${logoKanan}" width="65" height="65" />` : ''}
+                                ${showLogoKanan ? `<img src="${logoKanan}" width="62" height="62" />` : ''}
                             </td>
                         </tr>
                     </table>` : '';
@@ -1583,25 +1785,32 @@ Pastikan seluruh butir soal unik, bervariasi, dan sesuai standar evaluasi ${jenj
                     <meta charset='utf-8'>
                     <title>${filename}</title>
                     <style>
-                        @page {
-                            size: A4 portrait;
-                            margin: 2cm 2cm 2cm 2cm;
+                        @page Section1 {
+                            size: 21.0cm 29.7cm;
+                            margin: 1.5cm 1.8cm 1.5cm 1.8cm;
+                            mso-header-margin: 1.0cm;
+                            mso-footer-margin: 1.0cm;
                         }
+                        div.Section1 { page: Section1; }
                         body {
                             font-family: 'Times New Roman', Times, serif;
                             font-size: 12pt;
-                            line-height: 1.5;
+                            line-height: 1.4;
                             color: #000000;
+                            margin: 0;
+                            padding: 0;
                         }
+                        p { margin-top: 0; margin-bottom: 6pt; }
+                        ol, ul { margin-top: 2pt; margin-bottom: 8pt; }
                         table {
                             border-collapse: collapse;
                             table-layout: fixed;
                             width: 100%;
-                            margin-bottom: 10pt;
+                            margin-bottom: 8pt;
                         }
                         th, td {
                             border: 1px solid #000000;
-                            padding: 5pt;
+                            padding: 4pt 6pt;
                             vertical-align: top;
                             word-wrap: break-word;
                         }
@@ -1610,39 +1819,22 @@ Pastikan seluruh butir soal unik, bervariasi, dan sesuai standar evaluasi ${jenj
                             font-weight: bold;
                             text-align: center;
                         }
-                        ul.pg-options {
-                            list-style-type: none;
-                            margin-left: 18pt;
-                            padding-left: 0;
-                        }
-                        ul.pg-options li {
-                            margin-bottom: 2pt;
-                        }
-                        .kop-table td {
+                        .kop-table td, .sig-table td, .pg-word-table td {
                             border: none !important;
                             padding: 2pt;
-                            vertical-align: middle;
+                            vertical-align: top;
                         }
-                        .sig-table td {
-                            border: none !important;
-                        }
-                        h1, .doc-subtitle { font-size: 13pt; text-align: center !important; text-transform: uppercase; font-weight: bold; border-bottom: none !important; }
-                        h2 { font-size: 12pt; margin-top: 12pt; margin-bottom: 4pt; }
+                        h1, .doc-subtitle { font-size: 13pt; text-align: center !important; text-transform: uppercase; font-weight: bold; border-bottom: none !important; margin-top: 2pt; margin-bottom: 4pt; }
+                        h2 { font-size: 12pt; margin-top: 10pt; margin-bottom: 4pt; }
                         h3 { font-size: 12pt; margin-top: 8pt; margin-bottom: 4pt; }
                     </style>
                 </head>
                 <body>
-                    ${kopWordHtml}
-
-                    <!-- ISI DOKUMEN -->
-                    <div>
-                        ${docBodyHtml}
+                    <div class="Section1">
+                        ${kopWordHtml}
+                        <div>${docBodyHtml}</div>
+                        ${useSignatureBlock ? `<div class="sig-table" style="margin-top: 18pt;">${signatureHtml}</div>` : ''}
                     </div>
-
-                    ${useSignatureBlock ? `<!-- TANDA TANGAN -->
-                    <div class="sig-table" style="margin-top: 24pt;">
-                        ${signatureHtml}
-                    </div>` : ''}
                 </body>
                 </html>
             `;
