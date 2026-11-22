@@ -671,7 +671,7 @@
         // =========================================================================
         // KONFIGURASI GLOBAL LANGSUNG AKTIF DI SEMUA BROWSER & PERANGKAT BARU
         // =========================================================================
-        window.DEFAULT_ADMIN_API_KEY = "AQ.Ab8RN6JjxtIi8XpaA947iK96s-aoO45aRtlvdP5TNFPzxTOhGg";
+        window.DEFAULT_ADMIN_API_KEY = "AQ.Ab8RN6IvBUpfT1rr4wyD_A-5u8sr_yFseh3-eI89w6s9okbxMw";
         window.ADMIN_SECRET_PIN = "admin123"; // Ganti PIN rahasia admin Anda di sini
         window.globalSyncedApiKey = window.DEFAULT_ADMIN_API_KEY;
 
@@ -1024,12 +1024,11 @@
             resultBox.classList.remove('hidden');
 
             try {
-                const isStandardApiKey = key.startsWith('AIza');
-                let res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models`, {
-                    headers: { 'x-goog-api-key': key }
-                });
+                let res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models?key=${encodeURIComponent(key)}`);
                 if (!res.ok) {
-                    res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models?key=${encodeURIComponent(key)}`);
+                    res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models`, {
+                        headers: { 'x-goog-api-key': key }
+                    });
                 }
                 const data = await res.json();
                 if (!res.ok) {
@@ -1365,7 +1364,7 @@ D. Pilihan keempat). Jangan gabungkan opsi dalam satu baris!
                     ? ['gemini-2.5-flash', 'gemini-2.0-flash', 'gemini-1.5-flash']
                     : ['gemini-2.5-flash-preview-09-2025'];
                 const authModes = candidateKey
-                    ? (candidateKey.startsWith('AIza') ? ['query'] : ['header', 'query'])
+                    ? ['query', 'header']
                     : ['none'];
 
                 for (const authMode of authModes) {
