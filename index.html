@@ -1323,16 +1323,16 @@ D. Pilihan keempat). Jangan gabungkan opsi dalam satu baris!
         // Fungsi Pemanggilan Gemini API dengan Exponential Backoff Retry & Multi-Model Fallback
         async function callGeminiWithRetry(prompt, systemInstruction, maxRetries = 2) {
             const activeKey = window.getActiveApiKey ? window.getActiveApiKey() : (window.DEFAULT_ADMIN_API_KEY || "");
-            const isCanvasEnv = window.location.hostname.includes('usercontent.goog') || window.location.protocol === 'blob:';
+            const isCanvasEnv = /usercontent\.goog|localhost|127\.0\.0\.1/.test(window.location.hostname) || window.location.protocol === 'blob:';
 
             if (!activeKey && !isCanvasEnv) {
                 throw new Error('API Key belum dikonfigurasi oleh Admin.');
             }
 
-            // Susun kandidat konfigurasi (jika key eksternal ditolak di lingkungan preview, otomatis fallback ke key internal preview)
+            // Di lingkungan Preview, utamakan kredensial internal preview agar bebas error Permission Denied
             const keyCandidates = [];
-            if (activeKey) keyCandidates.push(activeKey);
-            if (isCanvasEnv && !keyCandidates.includes("")) keyCandidates.push("");
+            if (isCanvasEnv) keyCandidates.push("");
+            if (activeKey && !keyCandidates.includes(activeKey)) keyCandidates.push(activeKey);
 
             const versionsToTry = ['v1beta', 'v1'];
             let lastError = null;
