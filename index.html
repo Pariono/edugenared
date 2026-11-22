@@ -643,6 +643,7 @@
                 <div>
                     <label class="block text-xs font-semibold text-gray-700 mb-1">Masukkan Gemini API Key (dari aistudio.google.com)</label>
                     <input type="password" id="input-gemini-key" placeholder="AIzaSy..." class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500">
+                    <div id="api-test-result" class="hidden mt-2 p-2.5 rounded-lg text-[11px] font-medium"></div>
                 </div>
                 <div class="bg-gray-50 border border-gray-200 rounded-xl p-3 text-[11px] text-gray-600 space-y-1">
                     <p class="font-semibold text-gray-800">Opsi Permanen GitHub:</p>
@@ -650,6 +651,7 @@
                 </div>
                 <div class="flex items-center justify-between pt-2">
                     <div class="flex items-center gap-3">
+                        <button type="button" onclick="testCurrentApiKey()" class="text-xs text-indigo-600 hover:underline font-semibold">Tes API Key</button>
                         <button type="button" onclick="clearApiKey()" class="text-xs text-red-600 hover:underline font-medium">Reset Key</button>
                         <button type="button" onclick="hideAdminMenu()" class="text-xs text-amber-700 hover:underline font-semibold flex items-center gap-1">
                             <i data-lucide="eye-off" class="w-3.5 h-3.5"></i>
@@ -669,7 +671,7 @@
         // =========================================================================
         // KONFIGURASI GLOBAL LANGSUNG AKTIF DI SEMUA BROWSER & PERANGKAT BARU
         // =========================================================================
-        window.DEFAULT_ADMIN_API_KEY = "AIzaSyCTmcObx49-TAWlfg6RF5AVT0oeqwNik1g";
+        window.DEFAULT_ADMIN_API_KEY = "AIzaSyBNRgrDGXoP5PNhCdRNIXiQZU9Jp3G7wcE";
         window.ADMIN_SECRET_PIN = "admin123"; // Ganti PIN rahasia admin Anda di sini
         window.globalSyncedApiKey = window.DEFAULT_ADMIN_API_KEY;
 
@@ -685,13 +687,10 @@
             return synced || savedLocal || "";
         };
 
-        // Timpa cache lokal jika masih menyimpan format token lama (bukan AIzaSy)
+        // Timpa cache lokal dengan key default terbaru saat ini
         if (window.DEFAULT_ADMIN_API_KEY) {
             try {
-                const existingKey = localStorage.getItem('edugen_gemini_api_key') || "";
-                if (!existingKey || !existingKey.startsWith('AIza')) {
-                    localStorage.setItem('edugen_gemini_api_key', window.DEFAULT_ADMIN_API_KEY);
-                }
+                localStorage.setItem('edugen_gemini_api_key', window.DEFAULT_ADMIN_API_KEY);
             } catch (e) {}
         }
     </script>
@@ -1011,75 +1010,36 @@
             modal.classList.toggle('hidden');
         }
 
-        async function saveApiKey() {
-            const key = document.getElementById('input-gemini-key').value.trim();
-            if (key) {
-                window.globalSyncedApiKey = key;
-                localStorage.setItem('edugen_gemini_api_key', key);
-                if (typeof window._saveGlobalKeyToCloud === 'function') {
-                    try {
-                        await window._saveGlobalKeyToCloud(key);
-                        showToast('API Key tersimpan secara GLOBAL! Semua HP & Laptop langsung aktif.', 'success');
-                    } catch (e) {
-                        showToast('API Key berhasil disimpan!', 'success');
-                    }
+        async function testCurrentApiKey() {
+            const key = document.getElementById('input-gemini-key').value.trim() || window.getActiveApiKey();
+            const resultBox = document.getElementById('api-test-result');
+            if (!resultBox) return;
+
+            if (!key) {
+                resultBox.className = 'mt-2 p-2.5 rounded-lg text-[11px] font-medium bg-red-50 text-red-700 border border-red-200';
+                resultBox.textContent = 'API Key kosong. Masukkan key AIzaSy... terlebih dahulu.';
+                resultBox.classList.remove('hidden');
+                return;
+            }
+
+            resultBox.className = 'mt-2 p-2.5 rounded-lg text-[11px] font-medium bg-blue-50 text-blue-700 border border-blue-200';
+            resultBox.textContent = 'Sedang menguji koneksi API Key ke server Google Gemini...';
+            resultBox.classList.remove('hidden');
+
+            try {
+                const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models?key=${encodeURIComponent(key)}`);
+                const data = await res.json();
+                if (!res.ok) {
+                    const msg = data?.error?.message || `HTTP ${res.status}`;
+                    resultBox.className = 'mt-2 p-2.5 rounded-lg text-[11px] font-medium bg-red-50 text-red-700 border border-red-200';
+                    resultBox.innerHTML = `<b>Gagal (${res.status}):</b> ${msg}<br><span class="underline">Solusi:</span> Buka Google Cloud Credentials &rarr; klik key Anda &rarr; centang <b>Generative Language API</b> lalu klik Save.`;
                 } else {
-                    showToast('API Key berhasil disimpan!', 'success');
+                    resultBox.className = 'mt-2 p-2.5 rounded-lg text-[11px] font-medium bg-emerald-50 text-emerald-800 border border-emerald-200';
+                    resultBox.textContent = 'BERHASIL! API Key valid & siap digunakan di semua perangkat.';
                 }
-                if (window.updateApiStatusIndicator) window.updateApiStatusIndicator(true);
-            } else {
-                window.globalSyncedApiKey = "";
-                localStorage.removeItem('edugen_gemini_api_key');
-                if (typeof window._saveGlobalKeyToCloud === 'function') {
-                    try { await window._saveGlobalKeyToCloud(""); } catch (e) {}
-                }
-                if (window.updateApiStatusIndicator) window.updateApiStatusIndicator(false);
-                showToast('API Key dikosongkan.', 'info');
-            }
-            toggleApiModal();
-        }
-
-        async function clearApiKey() {
-            window.globalSyncedApiKey = "";
-            localStorage.removeItem('edugen_gemini_api_key');
-            document.getElementById('input-gemini-key').value = '';
-            if (typeof window._saveGlobalKeyToCloud === 'function') {
-                try { await window._saveGlobalKeyToCloud(""); } catch (e) {}
-            }
-            if (window.updateApiStatusIndicator) window.updateApiStatusIndicator(false);
-            showToast('API Key global telah dihapus.', 'info');
-        }
-
-        // Fungsi Update Dropdown Kelas, Mapel, dan Info Opsi PG saat Jenjang diubah
-        function updateJenjangDependencies() {
-            const jenjang = document.getElementById('jenjang').value;
-            const config = DATA_PENDIDIKAN[jenjang];
-            if (!config) return;
-
-            // Update Kelas
-            const kelasSelect = document.getElementById('kelas');
-            kelasSelect.innerHTML = config.kelas.map(k => `<option value="${k}">${k}</option>`).join('');
-
-            // Update Mapel + Opsi Lainnya
-            const mapelSelect = document.getElementById('mapel-select');
-            mapelSelect.innerHTML = config.mapel.map(m => `<option value="${m}">${m}</option>`).join('') +
-                `<option value="__CUSTOM__">+ Ketik Mata Pelajaran Lainnya...</option>`;
-            
-            toggleCustomMapel();
-
-            // Update Info Opsi PG otomatis
-            document.getElementById('badge-opsi-pg').textContent = config.badgePG;
-            document.getElementById('info-opsi-jenjang').textContent = config.badgePG;
-        }
-
-        function toggleCustomMapel() {
-            const val = document.getElementById('mapel-select').value;
-            const customInput = document.getElementById('mapel-custom');
-            if (val === '__CUSTOM__') {
-                customInput.classList.remove('hidden');
-                customInput.focus();
-            } else {
-                customInput.classList.add('hidden');
+            } catch (e) {
+                resultBox.className = 'mt-2 p-2.5 rounded-lg text-[11px] font-medium bg-red-50 text-red-700 border border-red-200';
+                resultBox.textContent = `Gagal terhubung: ${e.message}`;
             }
         }
 
@@ -1352,16 +1312,16 @@ D. Pilihan keempat). Jangan gabungkan opsi dalam satu baris!
             }
         }
 
-        // Helper Aturan Opsi Pilihan Ganda per Jenjang
+        // Helper Aturan Jumlah Opsi PG per Jenjang
         function getOpsiPGInstruction(jenjang, kelas) {
             if (jenjang === 'SMA / MA' || jenjang === 'SMK') {
-                return '5 pilihan jawaban yaitu A, B, C, D, dan E';
+                return '5 pilihan jawaban (A, B, C, D, dan E)';
             }
-            return '4 pilihan jawaban yaitu A, B, C, dan D';
+            return '4 pilihan jawaban (A, B, C, dan D)';
         }
 
-        // Fungsi Pemanggilan Gemini API dengan Exponential Backoff Retry
-        async function callGeminiWithRetry(prompt, systemInstruction, maxRetries = 4) {
+        // Fungsi Pemanggilan Gemini API dengan Exponential Backoff Retry & Multi-Model Fallback
+        async function callGeminiWithRetry(prompt, systemInstruction, maxRetries = 2) {
             const activeKey = window.getActiveApiKey ? window.getActiveApiKey() : (window.DEFAULT_ADMIN_API_KEY || "");
             const isCanvasEnv = window.location.hostname.includes('usercontent.goog') || window.location.protocol === 'blob:';
 
@@ -1369,56 +1329,75 @@ D. Pilihan keempat). Jangan gabungkan opsi dalam satu baris!
                 throw new Error('API Key belum dikonfigurasi oleh Admin.');
             }
 
-            const modelName = activeKey ? 'gemini-2.5-flash' : 'gemini-2.5-flash-preview-09-2025';
-            const baseUrl = `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent`;
-            
-            // Mendukung API Key standar Google AI Studio (AIzaSy...) maupun Auth Key
+            const modelsToTry = activeKey
+                ? ['gemini-2.5-flash', 'gemini-2.0-flash', 'gemini-1.5-flash', 'gemini-1.5-pro']
+                : ['gemini-2.5-flash-preview-09-2025'];
+
+            const versionsToTry = ['v1beta', 'v1'];
             const isStandardApiKey = activeKey.startsWith('AIza');
-            const url = isStandardApiKey ? `${baseUrl}?key=${encodeURIComponent(activeKey)}` : baseUrl;
+            let lastError = null;
 
-            const headers = { 'Content-Type': 'application/json' };
-            if (activeKey && !isStandardApiKey) {
-                headers['x-goog-api-key'] = activeKey;
+            for (const apiVersion of versionsToTry) {
+                for (const modelName of modelsToTry) {
+                    const baseUrl = `https://generativelanguage.googleapis.com/${apiVersion}/models/${modelName}:generateContent`;
+                    const url = isStandardApiKey ? `${baseUrl}?key=${encodeURIComponent(activeKey)}` : baseUrl;
+
+                    const headers = { 'Content-Type': 'application/json' };
+                    if (activeKey && !isStandardApiKey) {
+                        headers['x-goog-api-key'] = activeKey;
+                    }
+
+                    const payload = {
+                        contents: [{ role: 'user', parts: [{ text: prompt }] }],
+                        generationConfig: {
+                            temperature: 0.7,
+                            maxOutputTokens: 8192
+                        }
+                    };
+
+                    if (apiVersion === 'v1beta') {
+                        payload.systemInstruction = { parts: [{ text: systemInstruction }] };
+                    } else {
+                        payload.contents[0].parts[0].text = `${systemInstruction}\n\n${prompt}`;
+                    }
+
+                    let delay = 800;
+                    for (let attempt = 0; attempt <= maxRetries; attempt++) {
+                        try {
+                            const response = await fetch(url, {
+                                method: 'POST',
+                                headers: headers,
+                                body: JSON.stringify(payload)
+                            });
+
+                            if (!response.ok) {
+                                const errData = await response.json().catch(() => ({}));
+                                const errMsg = errData?.error?.message || `HTTP Error ${response.status}`;
+                                if (response.status === 400 || response.status === 403 || response.status === 404) {
+                                    lastError = new Error(errMsg);
+                                    break;
+                                }
+                                throw new Error(errMsg);
+                            }
+
+                            const data = await response.json();
+                            const text = data?.candidates?.[0]?.content?.parts?.[0]?.text;
+                            if (!text) {
+                                throw new Error('Respons AI kosong. Silakan coba lagi.');
+                            }
+                            return text;
+                        } catch (err) {
+                            lastError = err;
+                            if (attempt < maxRetries) {
+                                await new Promise(resolve => setTimeout(resolve, delay));
+                                delay *= 2;
+                            }
+                        }
+                    }
+                }
             }
 
-            const payload = {
-                contents: [{ role: 'user', parts: [{ text: prompt }] }],
-                systemInstruction: { parts: [{ text: systemInstruction }] },
-                generationConfig: {
-                    temperature: 0.7,
-                    maxOutputTokens: 8192
-                }
-            };
-
-            let delay = 1000;
-            for (let attempt = 0; attempt <= maxRetries; attempt++) {
-                try {
-                    const response = await fetch(url, {
-                        method: 'POST',
-                        headers: headers,
-                        body: JSON.stringify(payload)
-                    });
-
-                    if (!response.ok) {
-                        const errData = await response.json().catch(() => ({}));
-                        const errMsg = errData?.error?.message || `HTTP Error ${response.status}`;
-                        throw new Error(errMsg);
-                    }
-
-                    const data = await response.json();
-                    const text = data?.candidates?.[0]?.content?.parts?.[0]?.text;
-                    if (!text) {
-                        throw new Error('Respons AI kosong. Silakan coba lagi.');
-                    }
-                    return text;
-                } catch (err) {
-                    if (attempt === maxRetries) {
-                        throw err;
-                    }
-                    await new Promise(resolve => setTimeout(resolve, delay));
-                    delay *= 2;
-                }
-            }
+            throw lastError || new Error('Gagal terhubung ke server Gemini AI.');
         }
 
         // Formatter Otomatis Merapikan Pilihan Ganda & Judul
