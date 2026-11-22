@@ -1329,74 +1329,84 @@ D. Pilihan keempat). Jangan gabungkan opsi dalam satu baris!
                 throw new Error('API Key belum dikonfigurasi oleh Admin.');
             }
 
-            const modelsToTry = activeKey
-                ? ['gemini-2.5-flash', 'gemini-2.0-flash', 'gemini-1.5-flash', 'gemini-1.5-pro']
-                : ['gemini-2.5-flash-preview-09-2025'];
+            // Susun kandidat konfigurasi (jika key eksternal ditolak di lingkungan preview, otomatis fallback ke key internal preview)
+            const keyCandidates = [];
+            if (activeKey) keyCandidates.push(activeKey);
+            if (isCanvasEnv && !keyCandidates.includes("")) keyCandidates.push("");
 
             const versionsToTry = ['v1beta', 'v1'];
-            const isStandardApiKey = activeKey.startsWith('AIza');
             let lastError = null;
 
-            for (const apiVersion of versionsToTry) {
-                for (const modelName of modelsToTry) {
-                    const baseUrl = `https://generativelanguage.googleapis.com/${apiVersion}/models/${modelName}:generateContent`;
-                    const url = isStandardApiKey ? `${baseUrl}?key=${encodeURIComponent(activeKey)}` : baseUrl;
+            for (const candidateKey of keyCandidates) {
+                const modelsToTry = candidateKey
+                    ? ['gemini-2.5-flash', 'gemini-2.0-flash', 'gemini-1.5-flash', 'gemini-1.5-pro']
+                    : ['gemini-2.5-flash-preview-09-2025'];
+                const isStandardApiKey = candidateKey.startsWith('AIza');
 
-                    const headers = { 'Content-Type': 'application/json' };
-                    if (activeKey && !isStandardApiKey) {
-                        headers['x-goog-api-key'] = activeKey;
-                    }
+                for (const apiVersion of versionsToTry) {
+                    for (const modelName of modelsToTry) {
+                        const baseUrl = `https://generativelanguage.googleapis.com/${apiVersion}/models/${modelName}:generateContent`;
+                        const url = isStandardApiKey ? `${baseUrl}?key=${encodeURIComponent(candidateKey)}` : baseUrl;
 
-                    const payload = {
-                        contents: [{ role: 'user', parts: [{ text: prompt }] }],
-                        generationConfig: {
-                            temperature: 0.7,
-                            maxOutputTokens: 8192
+                        const headers = { 'Content-Type': 'application/json' };
+                        if (candidateKey && !isStandardApiKey) {
+                            headers['x-goog-api-key'] = candidateKey;
                         }
-                    };
 
-                    if (apiVersion === 'v1beta') {
-                        payload.systemInstruction = { parts: [{ text: systemInstruction }] };
-                    } else {
-                        payload.contents[0].parts[0].text = `${systemInstruction}\n\n${prompt}`;
-                    }
+                        const payload = {
+                            contents: [{ role: 'user', parts: [{ text: prompt }] }],
+                            generationConfig: {
+                                temperature: 0.7,
+                                maxOutputTokens: 8192
+                            }
+                        };
 
-                    let delay = 800;
-                    for (let attempt = 0; attempt <= maxRetries; attempt++) {
-                        try {
-                            const response = await fetch(url, {
-                                method: 'POST',
-                                headers: headers,
-                                body: JSON.stringify(payload)
-                            });
+                        if (apiVersion === 'v1beta') {
+                            payload.systemInstruction = { parts: [{ text: systemInstruction }] };
+                        } else {
+                            payload.contents[0].parts[0].text = `${systemInstruction}\n\n${prompt}`;
+                        }
 
-                            if (!response.ok) {
-                                const errData = await response.json().catch(() => ({}));
-                                const errMsg = errData?.error?.message || `HTTP Error ${response.status}`;
-                                if (response.status === 400 || response.status === 403 || response.status === 404) {
-                                    lastError = new Error(errMsg);
-                                    break;
+                        let delay = 800;
+                        for (let attempt = 0; attempt <= maxRetries; attempt++) {
+                            try {
+                                const response = await fetch(url, {
+                                    method: 'POST',
+                                    headers: headers,
+                                    body: JSON.stringify(payload)
+                                });
+
+                                if (!response.ok) {
+                                    const errData = await response.json().catch(() => ({}));
+                                    const errMsg = errData?.error?.message || `HTTP Error ${response.status}`;
+                                    if (response.status === 400 || response.status === 403 || response.status === 404) {
+                                        lastError = new Error(errMsg);
+                                        break;
+                                    }
+                                    throw new Error(errMsg);
                                 }
-                                throw new Error(errMsg);
-                            }
 
-                            const data = await response.json();
-                            const text = data?.candidates?.[0]?.content?.parts?.[0]?.text;
-                            if (!text) {
-                                throw new Error('Respons AI kosong. Silakan coba lagi.');
-                            }
-                            return text;
-                        } catch (err) {
-                            lastError = err;
-                            if (attempt < maxRetries) {
-                                await new Promise(resolve => setTimeout(resolve, delay));
-                                delay *= 2;
+                                const data = await response.json();
+                                const text = data?.candidates?.[0]?.content?.parts?.[0]?.text;
+                                if (!text) {
+                                    throw new Error('Respons AI kosong. Silakan coba lagi.');
+                                }
+                                return text;
+                            } catch (err) {
+                                lastError = err;
+                                if (attempt < maxRetries) {
+                                    await new Promise(resolve => setTimeout(resolve, delay));
+                                    delay *= 2;
+                                }
                             }
                         }
                     }
                 }
             }
 
+            if (lastError && /permission denied|service/i.test(lastError.message)) {
+                throw new Error('Permission denied on the service: Aktifkan "Generative Language API" pada API Key tersebut di Google Cloud Console.');
+            }
             throw lastError || new Error('Gagal terhubung ke server Gemini AI.');
         }
 
