@@ -671,12 +671,12 @@
         // =========================================================================
         // KONFIGURASI GLOBAL LANGSUNG AKTIF DI SEMUA BROWSER & PERANGKAT BARU
         // =========================================================================
-        window.DEFAULT_ADMIN_API_KEY = "AQ.Ab8RN6IvBUpfT1rr4wyD_A-5u8sr_yFseh3-eI89w6s9okbxMw";
+        window.DEFAULT_ADMIN_API_KEY = "AIzaSyDU3h_47ys-ZVkuEFjyyXC8zO3-jTno6CQ";
         window.ADMIN_SECRET_PIN = "admin123"; // Ganti PIN rahasia admin Anda di sini
         window.globalSyncedApiKey = window.DEFAULT_ADMIN_API_KEY;
 
-        // Timpa cache lokal dengan key default terbaru agar langsung aktif di semua perangkat
-        if (window.DEFAULT_ADMIN_API_KEY) {
+        // Timpa cache lokal dengan key standar AIzaSy terbaru agar tidak memakai token AQ. yang tidak valid
+        if (window.DEFAULT_ADMIN_API_KEY && window.DEFAULT_ADMIN_API_KEY.startsWith("AIza")) {
             try {
                 localStorage.setItem('edugen_gemini_api_key', window.DEFAULT_ADMIN_API_KEY);
             } catch (e) {}
@@ -687,8 +687,10 @@
             const embedded = (window.DEFAULT_ADMIN_API_KEY || "").trim();
             const synced = (window.globalSyncedApiKey || "").trim();
             const savedLocal = (localStorage.getItem('edugen_gemini_api_key') || "").trim();
-            if (embedded) return embedded;
-            return synced || savedLocal || "";
+            if (embedded && embedded.startsWith("AIza")) return embedded;
+            if (synced && synced.startsWith("AIza")) return synced;
+            if (savedLocal && savedLocal.startsWith("AIza")) return savedLocal;
+            return "";
         };
     </script>
 
