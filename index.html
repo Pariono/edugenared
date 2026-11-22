@@ -665,22 +665,34 @@
         </div>
     </div>
 
+    <script>
+        // =========================================================================
+        // KONFIGURASI GLOBAL LANGSUNG AKTIF DI SEMUA BROWSER & PERANGKAT BARU
+        // =========================================================================
+        window.DEFAULT_ADMIN_API_KEY = "AQ.Ab8RN6L55n0Vrk96mAa7C_iIojK3CVXG0mdkP45CCqNwOaDCRQ";
+        window.ADMIN_SECRET_PIN = "admin123"; // Ganti PIN rahasia admin Anda di sini
+        window.globalSyncedApiKey = window.DEFAULT_ADMIN_API_KEY;
+
+        // Prioritaskan key tertanam agar browser/HP baru langsung aktif tanpa setting ulang
+        window.getActiveApiKey = function() {
+            const savedLocal = (localStorage.getItem('edugen_gemini_api_key') || "").trim();
+            const synced = (window.globalSyncedApiKey || "").trim();
+            const embedded = (window.DEFAULT_ADMIN_API_KEY || "").trim();
+            return synced || savedLocal || embedded || "";
+        };
+
+        // Pastikan tersimpan ke storage browser baru saat pertama kali dibuka
+        if (window.DEFAULT_ADMIN_API_KEY && !localStorage.getItem('edugen_gemini_api_key')) {
+            try {
+                localStorage.setItem('edugen_gemini_api_key', window.DEFAULT_ADMIN_API_KEY);
+            } catch (e) {}
+        }
+    </script>
+
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
         import { getAuth, signInAnonymously, signInWithCustomToken } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
         import { getFirestore, doc, getDoc, setDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
-
-        // =========================================================================
-        // PENGATURAN API KEY & PIN ADMIN (UBAH PIN DI SINI SEBELUM UPLOAD GITHUB)
-        // =========================================================================
-        const DEFAULT_ADMIN_API_KEY = "AQ.Ab8RN6L55n0Vrk96mAa7C_iIojK3CVXG0mdkP45CCqNwOaDCRQ"; // API Key tertanam permanen
-        const ADMIN_SECRET_PIN = "admin123"; // Ganti PIN rahasia admin Anda di sini
-        window.ADMIN_SECRET_PIN = ADMIN_SECRET_PIN;
-        window.globalSyncedApiKey = DEFAULT_ADMIN_API_KEY;
-
-        window.getActiveApiKey = function() {
-            return window.globalSyncedApiKey || localStorage.getItem('edugen_gemini_api_key') || DEFAULT_ADMIN_API_KEY || "";
-        };
 
         function updateApiStatusIndicator(isActive) {
             const dot = document.getElementById('api-status-dot');
@@ -829,14 +841,15 @@
 
                     onSnapshot(configRef, (docSnap) => {
                         if (docSnap.exists()) {
-                            const remoteKey = docSnap.data().apiKey || "";
-                            window.globalSyncedApiKey = remoteKey;
+                            const remoteKey = (docSnap.data().apiKey || "").trim();
+                            // Hanya timpa jika remoteKey benar-benar diisi admin; jika kosong tetap pakai DEFAULT_ADMIN_API_KEY
                             if (remoteKey) {
+                                window.globalSyncedApiKey = remoteKey;
                                 localStorage.setItem('edugen_gemini_api_key', remoteKey);
                             } else {
-                                localStorage.removeItem('edugen_gemini_api_key');
+                                window.globalSyncedApiKey = window.DEFAULT_ADMIN_API_KEY || "";
                             }
-                            updateApiStatusIndicator(Boolean(remoteKey));
+                            updateApiStatusIndicator(Boolean(window.getActiveApiKey()));
                         }
                     });
 
@@ -1342,16 +1355,23 @@ D. Pilihan keempat). Jangan gabungkan opsi dalam satu baris!
 
         // Fungsi Pemanggilan Gemini API dengan Exponential Backoff Retry
         async function callGeminiWithRetry(prompt, systemInstruction, maxRetries = 4) {
-            const activeKey = window.getActiveApiKey ? window.getActiveApiKey() : "";
+            const activeKey = window.getActiveApiKey ? window.getActiveApiKey() : (window.DEFAULT_ADMIN_API_KEY || "");
             const isCanvasEnv = window.location.hostname.includes('usercontent.goog') || window.location.protocol === 'blob:';
 
             if (!activeKey && !isCanvasEnv) {
-                toggleApiModal();
-                throw new Error('API Key belum diatur. Silakan masukkan Gemini API Key Anda terlebih dahulu.');
+                throw new Error('API Key belum dikonfigurasi oleh Admin.');
             }
 
             const modelName = activeKey ? 'gemini-3-flash-preview' : 'gemini-2.5-flash-preview-09-2025';
-            const url = `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent?key=${encodeURIComponent(activeKey)}`;
+            const isStandardApiKey = activeKey.startsWith('AIza');
+            const url = isStandardApiKey || !activeKey
+                ? `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent?key=${encodeURIComponent(activeKey)}`
+                : `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent`;
+
+            const headers = { 'Content-Type': 'application/json' };
+            if (activeKey && !isStandardApiKey) {
+                headers['Authorization'] = `Bearer ${activeKey}`;
+            }
 
             const payload = {
                 contents: [{ role: 'user', parts: [{ text: prompt }] }],
@@ -1367,7 +1387,7 @@ D. Pilihan keempat). Jangan gabungkan opsi dalam satu baris!
                 try {
                     const response = await fetch(url, {
                         method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
+                        headers: headers,
                         body: JSON.stringify(payload)
                     });
 
