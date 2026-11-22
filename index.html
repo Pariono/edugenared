@@ -671,28 +671,25 @@
         // =========================================================================
         // KONFIGURASI GLOBAL LANGSUNG AKTIF DI SEMUA BROWSER & PERANGKAT BARU
         // =========================================================================
-        window.DEFAULT_ADMIN_API_KEY = "AIzaSyBNRgrDGXoP5PNhCdRNIXiQZU9Jp3G7wcE";
+        window.DEFAULT_ADMIN_API_KEY = "AQ.Ab8RN6JjxtIi8XpaA947iK96s-aoO45aRtlvdP5TNFPzxTOhGg";
         window.ADMIN_SECRET_PIN = "admin123"; // Ganti PIN rahasia admin Anda di sini
         window.globalSyncedApiKey = window.DEFAULT_ADMIN_API_KEY;
+
+        // Timpa cache lokal dengan key default terbaru agar langsung aktif di semua perangkat
+        if (window.DEFAULT_ADMIN_API_KEY) {
+            try {
+                localStorage.setItem('edugen_gemini_api_key', window.DEFAULT_ADMIN_API_KEY);
+            } catch (e) {}
+        }
 
         // Prioritaskan key tertanam agar browser/HP baru langsung aktif tanpa setting ulang
         window.getActiveApiKey = function() {
             const embedded = (window.DEFAULT_ADMIN_API_KEY || "").trim();
             const synced = (window.globalSyncedApiKey || "").trim();
             const savedLocal = (localStorage.getItem('edugen_gemini_api_key') || "").trim();
-            // Pastikan key AIzaSy yang valid selalu diprioritaskan di atas sisa token AQ lama di cache
-            if (synced && synced.startsWith('AIza')) return synced;
-            if (savedLocal && savedLocal.startsWith('AIza')) return savedLocal;
             if (embedded) return embedded;
             return synced || savedLocal || "";
         };
-
-        // Timpa cache lokal dengan key default terbaru saat ini
-        if (window.DEFAULT_ADMIN_API_KEY) {
-            try {
-                localStorage.setItem('edugen_gemini_api_key', window.DEFAULT_ADMIN_API_KEY);
-            } catch (e) {}
-        }
     </script>
 
     <script type="module">
@@ -1017,7 +1014,7 @@
 
             if (!key) {
                 resultBox.className = 'mt-2 p-2.5 rounded-lg text-[11px] font-medium bg-red-50 text-red-700 border border-red-200';
-                resultBox.textContent = 'API Key kosong. Masukkan key AIzaSy... terlebih dahulu.';
+                resultBox.textContent = 'API Key kosong. Masukkan key terlebih dahulu.';
                 resultBox.classList.remove('hidden');
                 return;
             }
@@ -1027,12 +1024,18 @@
             resultBox.classList.remove('hidden');
 
             try {
-                const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models?key=${encodeURIComponent(key)}`);
+                const isStandardApiKey = key.startsWith('AIza');
+                const testUrl = isStandardApiKey
+                    ? `https://generativelanguage.googleapis.com/v1beta/models?key=${encodeURIComponent(key)}`
+                    : `https://generativelanguage.googleapis.com/v1beta/models`;
+                const testHeaders = isStandardApiKey ? {} : { 'x-goog-api-key': key };
+
+                const res = await fetch(testUrl, { headers: testHeaders });
                 const data = await res.json();
                 if (!res.ok) {
                     const msg = data?.error?.message || `HTTP ${res.status}`;
                     resultBox.className = 'mt-2 p-2.5 rounded-lg text-[11px] font-medium bg-red-50 text-red-700 border border-red-200';
-                    resultBox.innerHTML = `<b>Gagal (${res.status}):</b> ${msg}<br><span class="underline">Solusi:</span> Buka Google Cloud Credentials &rarr; klik key Anda &rarr; centang <b>Generative Language API</b> lalu klik Save.`;
+                    resultBox.innerHTML = `<b>Gagal (${res.status}):</b> ${msg}`;
                 } else {
                     resultBox.className = 'mt-2 p-2.5 rounded-lg text-[11px] font-medium bg-emerald-50 text-emerald-800 border border-emerald-200';
                     resultBox.textContent = 'BERHASIL! API Key valid & siap digunakan di semua perangkat.';
@@ -1041,6 +1044,26 @@
                 resultBox.className = 'mt-2 p-2.5 rounded-lg text-[11px] font-medium bg-red-50 text-red-700 border border-red-200';
                 resultBox.textContent = `Gagal terhubung: ${e.message}`;
             }
+        }
+
+        function saveApiKey() {
+            const newKey = document.getElementById('input-gemini-key').value.trim();
+            window.DEFAULT_ADMIN_API_KEY = newKey;
+            window.globalSyncedApiKey = newKey;
+            localStorage.setItem('edugen_gemini_api_key', newKey);
+            if (window._saveGlobalKeyToCloud) {
+                window._saveGlobalKeyToCloud(newKey).catch(() => {});
+            }
+            if (window.updateApiStatusIndicator) {
+                window.updateApiStatusIndicator(Boolean(newKey));
+            }
+            showToast('API Key berhasil disimpan secara global!', 'success');
+        }
+
+        function clearApiKey() {
+            document.getElementById('input-gemini-key').value = '';
+            localStorage.removeItem('edugen_gemini_api_key');
+            showToast('Input API Key dibersihkan.', 'info');
         }
 
         function getSelectedMapel() {
@@ -1339,7 +1362,7 @@ D. Pilihan keempat). Jangan gabungkan opsi dalam satu baris!
 
             for (const candidateKey of keyCandidates) {
                 const modelsToTry = candidateKey
-                    ? ['gemini-2.5-flash', 'gemini-2.0-flash', 'gemini-1.5-flash', 'gemini-1.5-pro']
+                    ? ['gemini-2.0-flash', 'gemini-1.5-flash', 'gemini-2.5-flash', 'gemini-1.5-pro']
                     : ['gemini-2.5-flash-preview-09-2025'];
                 const isStandardApiKey = candidateKey.startsWith('AIza');
 
@@ -1405,7 +1428,7 @@ D. Pilihan keempat). Jangan gabungkan opsi dalam satu baris!
             }
 
             if (lastError && /permission denied|service/i.test(lastError.message)) {
-                throw new Error('Permission denied on the service: Aktifkan "Generative Language API" pada API Key tersebut di Google Cloud Console.');
+                throw new Error(`${lastError.message} — Pastikan di Google Cloud Console > Credentials > API Key Anda, bagian "API restrictions" sudah mencentang "Generative Language API" lalu klik Save.`);
             }
             throw lastError || new Error('Gagal terhubung ke server Gemini AI.');
         }
