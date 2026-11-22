@@ -669,22 +669,29 @@
         // =========================================================================
         // KONFIGURASI GLOBAL LANGSUNG AKTIF DI SEMUA BROWSER & PERANGKAT BARU
         // =========================================================================
-        window.DEFAULT_ADMIN_API_KEY = "AQ.Ab8RN6Jjxtli8XpaA947iK96s-aoO45aRtlvdP5TNFPzxTOhGg";
+        window.DEFAULT_ADMIN_API_KEY = "AIzaSyCTmcObx49-TAWlfg6RF5AVT0oeqwNik1g";
         window.ADMIN_SECRET_PIN = "admin123"; // Ganti PIN rahasia admin Anda di sini
         window.globalSyncedApiKey = window.DEFAULT_ADMIN_API_KEY;
 
         // Prioritaskan key tertanam agar browser/HP baru langsung aktif tanpa setting ulang
         window.getActiveApiKey = function() {
-            const savedLocal = (localStorage.getItem('edugen_gemini_api_key') || "").trim();
-            const synced = (window.globalSyncedApiKey || "").trim();
             const embedded = (window.DEFAULT_ADMIN_API_KEY || "").trim();
-            return synced || savedLocal || embedded || "";
+            const synced = (window.globalSyncedApiKey || "").trim();
+            const savedLocal = (localStorage.getItem('edugen_gemini_api_key') || "").trim();
+            // Pastikan key AIzaSy yang valid selalu diprioritaskan di atas sisa token AQ lama di cache
+            if (synced && synced.startsWith('AIza')) return synced;
+            if (savedLocal && savedLocal.startsWith('AIza')) return savedLocal;
+            if (embedded) return embedded;
+            return synced || savedLocal || "";
         };
 
-        // Pastikan tersimpan ke storage browser baru saat pertama kali dibuka
-        if (window.DEFAULT_ADMIN_API_KEY && !localStorage.getItem('edugen_gemini_api_key')) {
+        // Timpa cache lokal jika masih menyimpan format token lama (bukan AIzaSy)
+        if (window.DEFAULT_ADMIN_API_KEY) {
             try {
-                localStorage.setItem('edugen_gemini_api_key', window.DEFAULT_ADMIN_API_KEY);
+                const existingKey = localStorage.getItem('edugen_gemini_api_key') || "";
+                if (!existingKey || !existingKey.startsWith('AIza')) {
+                    localStorage.setItem('edugen_gemini_api_key', window.DEFAULT_ADMIN_API_KEY);
+                }
             } catch (e) {}
         }
     </script>
