@@ -669,7 +669,7 @@
         // =========================================================================
         // KONFIGURASI GLOBAL LANGSUNG AKTIF DI SEMUA BROWSER & PERANGKAT BARU
         // =========================================================================
-        window.DEFAULT_ADMIN_API_KEY = "AQ.Ab8RN6L55n0Vrk96mAa7C_iIojK3CVXG0mdkP45CCqNwOaDCRQ";
+        window.DEFAULT_ADMIN_API_KEY = "AQ.Ab8RN6Jjxtli8XpaA947iK96s-aoO45aRtlvdP5TNFPzxTOhGg";
         window.ADMIN_SECRET_PIN = "admin123"; // Ganti PIN rahasia admin Anda di sini
         window.globalSyncedApiKey = window.DEFAULT_ADMIN_API_KEY;
 
@@ -1362,15 +1362,16 @@ D. Pilihan keempat). Jangan gabungkan opsi dalam satu baris!
                 throw new Error('API Key belum dikonfigurasi oleh Admin.');
             }
 
-            const modelName = activeKey ? 'gemini-3-flash-preview' : 'gemini-2.5-flash-preview-09-2025';
+            const modelName = activeKey ? 'gemini-2.5-flash' : 'gemini-2.5-flash-preview-09-2025';
+            const baseUrl = `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent`;
+            
+            // Mendukung API Key standar Google AI Studio (AIzaSy...) maupun Auth Key
             const isStandardApiKey = activeKey.startsWith('AIza');
-            const url = isStandardApiKey || !activeKey
-                ? `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent?key=${encodeURIComponent(activeKey)}`
-                : `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent`;
+            const url = isStandardApiKey ? `${baseUrl}?key=${encodeURIComponent(activeKey)}` : baseUrl;
 
             const headers = { 'Content-Type': 'application/json' };
             if (activeKey && !isStandardApiKey) {
-                headers['Authorization'] = `Bearer ${activeKey}`;
+                headers['x-goog-api-key'] = activeKey;
             }
 
             const payload = {
